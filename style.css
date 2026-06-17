@@ -2,9 +2,15 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: #1a1a1a;
+    background-color: #1a1a1a; /* Тъмна тема по подразбиране */
     font-family: Arial, sans-serif;
     user-select: none;
+    transition: background-color 0.3s; /* Плавен преход */
+}
+
+/* Когато е активирана светлата тема */
+body.light-theme {
+    background-color: #f0f0f0;
 }
 
 #canvas-container {
@@ -19,9 +25,8 @@ body {
 }
 
 canvas {
-    /* ПРОМЯНА: Правим платното прозрачно, за да се вижда тъмния фон на сайта през изтритите места */
     background-color: transparent; 
-    box-shadow: 0 0 30px rgba(0,0,0,0.7);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
     position: absolute;
     transform-origin: 0 0;
     
@@ -30,10 +35,16 @@ canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 
-    /* Мрежата остава, но линиите са малко по-светли, за да се виждат на тъмно */
+    /* Мрежа за ТЪМНА тема (бели тънки линии) */
     background-size: 1px 1px;
     background-image: linear-gradient(to right, rgba(255,255,255,0.15) 0.1px, transparent 0.1px),
                       linear-gradient(to bottom, rgba(255,255,255,0.15) 0.1px, transparent 0.1px);
+}
+
+/* Мрежа за СВЕТЛА тема (тъмни тънки линии), когато се добави класът */
+body.light-theme canvas {
+    background-image: linear-gradient(to right, rgba(0,0,0,0.1) 0.1px, transparent 0.1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.1) 0.1px, transparent 0.1px);
 }
 
 #ui-container {
@@ -52,8 +63,7 @@ canvas {
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
-#center-btn {
-    background-color: #4CAF50;
+#center-btn, #eraser-btn, #theme-btn {
     color: white;
     border: none;
     padding: 8px 16px;
@@ -65,8 +75,18 @@ canvas {
     width: 100%;
 }
 
+#center-btn { background-color: #4CAF50; }
 #center-btn:hover { background-color: #45a049; }
-#center-btn:active { transform: scale(0.95); }
+
+#eraser-btn { background-color: #555; }
+#eraser-btn:hover { background-color: #666; }
+#eraser-btn.active { background-color: #007bff; box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); }
+
+/* Стил за новия бутон за тема */
+#theme-btn { background-color: #6a1b9a; }
+#theme-btn:hover { background-color: #8e24aa; }
+
+#center-btn:active, #eraser-btn:active, #theme-btn:active { transform: scale(0.95); }
 
 #timer {
     color: white;
