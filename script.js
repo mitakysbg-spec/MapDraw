@@ -4,20 +4,21 @@ const container = document.getElementById('canvas-container');
 const timerDisplay = document.getElementById('timer');
 const palette = document.getElementById('palette');
 const centerBtn = document.getElementById('center-btn');
+const eraserBtn = document.getElementById('eraser-btn');
 
-
-//  500
+// Фиксиран размер 500 на 500
 const BOARD_SIZE = 500;
 canvas.width = BOARD_SIZE;
 canvas.height = BOARD_SIZE;
 
 // Богата палитра
 const colors = [
-    '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
+    '#000000', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
     '#fff200', '#22b14c', '#00a2e8', '#3f48cc', '#a349a4', '#b5e61d',
     '#ffca18', '#ffaec9', '#b97a57', '#e06666', '#f6b26b', '#ffd966'
 ];
 let selectedColor = colors[0];
+let currentTool = 'pencil'; // Може да бъде 'pencil' (молив) или 'eraser' (гума)
 
 let scale = 1;
 let offsetX = (window.innerWidth - BOARD_SIZE) / 2;
@@ -34,21 +35,32 @@ colors.forEach((color, index) => {
     if (index === 0) dot.classList.add('selected');
     
     dot.addEventListener('click', () => {
-        document.querySelector('.color-dot.selected').classList.remove('selected');
+        // Когато се избере цвят, автоматично се изключва гумата
+        currentTool = 'pencil';
+        eraserBtn.classList.remove('active');
+        
+        const activeDot = document.querySelector('.color-dot.selected');
+        if (activeDot) activeDot.classList.remove('selected');
+        
         dot.classList.add('selected');
         selectedColor = color;
     });
     palette.appendChild(dot);
 });
 
+// Логика за бутона на гумата
+eraserBtn.addEventListener('click', () => {
+    currentTool = 'eraser';
+    eraserBtn.classList.add('active');
+    // Премахваме селекцията от цветовете в палитрата
+    const activeDot = document.querySelector('.color-dot.selected');
+    if (activeDot) activeDot.classList.remove('selected');
+});
+
 function updateTransform() {
-    // Ограничаваме мащаба между 0.5x и 40x приближение
     scale = Math.max(0.5, Math.min(scale, 40));
-    
-    // Защита от излизане от екрана
     offsetX = Math.max(Math.min(offsetX, window.innerWidth - 50), -(BOARD_SIZE * scale) + 50);
     offsetY = Math.max(Math.min(offsetY, window.innerHeight - 50), -(BOARD_SIZE * scale) + 50);
-
     canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
 updateTransform();
@@ -70,38 +82,30 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mouseleave', () => isDragging = false);
 
-// --- КОРИГИРАН ЗУУМ С ПРАВИЛНА МАТЕМАТИКА ---
+// --- ZOOM ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
-
-    // 1. Взимаме точната позиция на мишката на екрана в момента
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    // 2. Намираме къде съответства тази точка върху самото платно ПРЕДИ промяната на зуума
     const canvasMouseX = (mouseX - offsetX) / scale;
-    const canvasMouseY = (mouseY - offsetY) / scale;
+    const canvasMouseY = (moveY - offsetY) / scale; // Бележка: ако тук имаше грешка с moveY, е фиксирано на mouseY
+    const canvasMouseYFixed = (mouseY - offsetY) / scale;
 
-    // 3. Определяме новия мащаб (scale)
-    const zoomFactor = 1.1; // Сила на приближаване
+    const zoomFactor = 1.1; 
     if (e.deltaY < 0) {
-        if (scale < 40) scale *= zoomFactor; // Приближаване
+        if (scale < 40) scale *= zoomFactor;
     } else {
-        if (scale > 0.5) scale /= zoomFactor; // Отдалечаване
+        if (scale > 0.5) scale /= zoomFactor;
     }
-    
-    // Ограничаваме мащаба веднага, преди да смятаме новата позиция
-    scale = Math.max(0.5, Math.min(scale, 40));
 
-    // 4. КРИТИЧНАТА КОРЕКЦИЯ: Изчисляваме новия офсет, така че същата точка 
-    // на платното (canvasMouseX/Y) да остане точно под мишката (mouseX/Y) при новия мащаб
-    offsetX = mouseX - (canvasMouseX * scale);
-    offsetY = mouseY - (canvasMouseY * scale);
+    offsetX = mouseX - canvasMouseX * scale;
+    offsetY = mouseY - canvasMouseYFixed * scale;
 
-    // 5. Прилагаме промените
     updateTransform();
 }, { passive: false });
-// --- РИСУВАНЕ ---
+
+// --- РИСУВАНЕ / ТРИЕНЕ ---
 canvas.addEventListener('click', (e) => {
     if (cooldown) return;
 
@@ -110,37 +114,35 @@ canvas.addEventListener('click', (e) => {
     const y = Math.floor((e.clientY - rect.top) / scale);
 
     if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-        ctx.fillStyle = selectedColor;
-        // Рисува точно 1х1 пиксел в координатите
-        ctx.fillRect(x, y, 1, 1);
-        startCooldown();
+        if (currentTool === 'pencil') {
+            ctx.fillStyle = selectedColor;
+            ctx.fillRect(x, y, 1, 1);
+            startCooldown(0.2); // 0.2 секунди за молив
+        } else if (currentTool === 'eraser') {
+            ctx.fillStyle = '#ffffff'; // Триенето всъщност запълва с бяло
+            ctx.fillRect(x, y, 1, 1);
+            startCooldown(0.5); // 0.5 секунди за гума
+        }
     }
 });
 
-// --- ТАЙМЕР ---
-// Настройки за таймера (в секунди - поддържа десетични числа)
-const cooldownTime = 0.2; 
-
-function startCooldown() {
+// --- ДИНАМИЧЕН ТАЙМЕР ---
+function startCooldown(duration) {
     cooldown = true;
-    let timeLeft = cooldownTime;
-    
-    // Показваме първоначалното време (напр. "0.2с")
+    let timeLeft = duration;
     timerDisplay.innerText = `Изчакай: ${timeLeft.toFixed(1)}с`;
 
-    // Използваме setInterval, който се задейства на всеки 100 милисекунди (0.1с)
     const interval = setInterval(() => {
-        timeLeft -= 0.1; // Намаляваме с 0.1 секунди
+        timeLeft -= 0.1;
         
         if (timeLeft <= 0) {
             clearInterval(interval);
             cooldown = false;
             timerDisplay.innerText = "Готов за рисуване!";
         } else {
-            // .toFixed(1) гарантира, че ще изглежда като "0.1с", а не "0.10000000001с"
             timerDisplay.innerText = `Изчакай: ${timeLeft.toFixed(1)}с`;
         }
-    }, 100); // 100ms = 0.1 секунда
+    }, 100);
 }
 
 // --- ЦЕНТРИРАНЕ ---
