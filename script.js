@@ -82,35 +82,31 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mouseleave', () => isDragging = false);
 
-// --- КОРИГИРАН ЗУУМ С ПРАВИЛНА МАТЕМАТИКА ---
+// --- ZOOM (КОРИГИРАН И ТЕСТВАН) ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
-
-    // 1. Взимаме точната позиция на мишката на екрана в момента
+    
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    // 2. Намираме къде съответства тази точка върху самото платно ПРЕДИ промяната на зуума
+    // Взимане на координатите спрямо текущия мащаб
     const canvasMouseX = (mouseX - offsetX) / scale;
     const canvasMouseY = (mouseY - offsetY) / scale;
 
-    // 3. Определяме новия мащаб (scale)
-    const zoomFactor = 1.1; // Сила на приближаване
+    const zoomFactor = 1.1; 
     if (e.deltaY < 0) {
-        if (scale < 40) scale *= zoomFactor; // Приближаване
+        if (scale < 40) scale *= zoomFactor;
     } else {
-        if (scale > 0.5) scale /= zoomFactor; // Отдалечаване
+        if (scale > 0.5) scale /= zoomFactor;
     }
-    
-    // Ограничаваме мащаба веднага, преди да смятаме новата позиция
+
+    // Фиксиране на мащаба
     scale = Math.max(0.5, Math.min(scale, 40));
 
-    // 4. КРИТИЧНАТА КОРЕКЦИЯ: Изчисляваме новия офсет, така че същата точка 
-    // на платното (canvasMouseX/Y) да остане точно под мишката (mouseX/Y) при новия мащаб
-    offsetX = mouseX - (canvasMouseX * scale);
-    offsetY = mouseY - (canvasMouseY * scale);
+    // Преизчисляване на офсета, за да зуумва точно в мишката
+    offsetX = mouseX - canvasMouseX * scale;
+    offsetY = mouseY - canvasMouseY * scale;
 
-    // 5. Прилагаме промените
     updateTransform();
 }, { passive: false });
 
