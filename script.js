@@ -1,4 +1,4 @@
-// --- 1. ТВОЯТА ФИКСИРАНА FIREBASE КОНФИГУРАЦИЯ ---
+// --- 1. FIREBASE КОНФИГУРАЦИЯ ---
 const firebaseConfig = {
   apiKey: "AIzaSyANO5MIoy1sk2WoRVKaxVdCWwpF3Kismjo",
   authDomain: "my-pixel-canvas.firebaseapp.com",
@@ -9,7 +9,6 @@ const firebaseConfig = {
   appId: "1:125785381535:web:e330c42e375dcf9b4160aa"
 };
 
-// Инициализиране на връзката с базата данни
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const pixelsRef = database.ref('pixels');
@@ -23,11 +22,10 @@ const palette = document.getElementById('palette');
 const centerBtn = document.getElementById('center-btn');
 const eraserBtn = document.getElementById('eraser-btn');
 
-const BOARD_SIZE = 500; // Размер 500х500
+const BOARD_SIZE = 500; 
 canvas.width = BOARD_SIZE;
 canvas.height = BOARD_SIZE;
 
-// Богата палитра - БЯЛОТО е на второ място
 const colors = [
     '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
     '#fff200', '#22b14c', '#00a2e8', '#3f48cc', '#a349a4', '#b5e61d',
@@ -43,7 +41,7 @@ let isDragging = false;
 let startX, startY;
 let cooldown = false;
 
-// Генериране на палитрата на екрана
+// Генериране на палитра
 colors.forEach((color, index) => {
     const dot = document.createElement('div');
     dot.className = 'color-dot';
@@ -62,7 +60,6 @@ colors.forEach((color, index) => {
     palette.appendChild(dot);
 });
 
-// Бутон за гумата
 eraserBtn.addEventListener('click', () => {
     currentTool = 'eraser';
     eraserBtn.classList.add('active');
@@ -70,7 +67,6 @@ eraserBtn.addEventListener('click', () => {
     if (activeDot) activeDot.classList.remove('selected');
 });
 
-// Движение на камерата
 function updateTransform() {
     scale = Math.max(0.5, Math.min(scale, 40));
     offsetX = Math.max(Math.min(offsetX, window.innerWidth - 50), -(BOARD_SIZE * scale) + 50);
@@ -94,13 +90,13 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mouseleave', () => isDragging = false);
 
-// --- ZOOM ---
+// --- ZOOM (ФИКСИРАН) ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     const canvasMouseX = (mouseX - offsetX) / scale;
-    const canvasMouseY = (moveY - offsetY) / scale;
+    const canvasMouseY = (mouseY - offsetY) / scale; // Поправено от moveY на mouseY
 
     const zoomFactor = 1.1; 
     if (e.deltaY < 0) {
@@ -114,7 +110,7 @@ container.addEventListener('wheel', (e) => {
     updateTransform();
 }, { passive: false });
 
-// --- СИНХРОНИЗИРАНО РИСУВАНЕ И ТРИЕНЕ ---
+// --- РИСУВАНЕ / ТРИЕНЕ ---
 canvas.addEventListener('click', (e) => {
     if (cooldown) return;
 
@@ -126,18 +122,15 @@ canvas.addEventListener('click', (e) => {
         const pixelKey = `x${x}_y${y}`;
 
         if (currentTool === 'pencil') {
-            // Изпращане на пиксела към Firebase
             pixelsRef.child(pixelKey).set({ x: x, y: y, color: selectedColor });
-            startCooldown(0.2); // 0.2 секунди
+            startCooldown(0.2); 
         } else if (currentTool === 'eraser') {
-            // Изтриване на пиксела от Firebase
             pixelsRef.child(pixelKey).remove();
-            startCooldown(0.5); // 0.5 секунди за гума
+            startCooldown(0.5); 
         }
     }
 });
 
-// --- ДИНАМИЧЕН ТАЙМЕР ---
 function startCooldown(duration) {
     cooldown = true;
     let timeLeft = duration;
@@ -155,7 +148,7 @@ function startCooldown(duration) {
     }, 100);
 }
 
-// --- СЛУШАТЕЛИ ЗА ОБНОВЯВАНЕ В РЕАЛНО ВРЕМЕ ---
+// --- СЛУШАТЕЛИ ---
 pixelsRef.on('child_added', (snapshot) => {
     const data = snapshot.val();
     ctx.fillStyle = data.color;
@@ -173,7 +166,6 @@ pixelsRef.on('child_removed', (snapshot) => {
     ctx.clearRect(data.x, data.y, 1, 1);
 });
 
-// --- ЦЕНТРИРАНЕ ---
 function resetView() {
     scale = 1;
     offsetX = (window.innerWidth - BOARD_SIZE) / 2;
