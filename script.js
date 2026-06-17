@@ -4,29 +4,36 @@ const container = document.getElementById('canvas-container');
 const timerDisplay = document.getElementById('timer');
 const palette = document.getElementById('palette');
 
+// Настройки на платното
 const BOARD_SIZE = 1000;
+const PIXEL_SIZE = 1; // 1 пиксел на екрана е 1 пиксел в матрицата
 
-// Цветове
+// Богата палитра от цветове
 const colors = [
-    '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
-    '#fff200', '#22b14c', '#00a2e8', '#3f48cc', '#a349a4'
+    '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#22b14c', '#b5e61d',
+    '#ed1c24', '#ff7f27', '#fff200', '#3f48cc', '#00a2e8', '#a349a4',
+    '#c3c3c3', '#b97a57', '#ffaec9', '#ffca18', '#efe4b0', '#b5e61d'
 ];
 let selectedColor = colors[0];
 
-// Начална позиция - центрирано на екрана
+// Състояние на трансформацията (Zoom & Drag)
 let scale = 1;
 let offsetX = (window.innerWidth - BOARD_SIZE) / 2;
 let offsetY = (window.innerHeight - BOARD_SIZE) / 2;
 let isDragging = false;
 let startX, startY;
-let cooldown = false;
 
-// Генериране на палитра
+// Състояние на таймера
+let cooldown = false;
+let cooldownTime = 2; // 2 секунди
+
+// Инициализиране на палитрата
 colors.forEach((color, index) => {
     const dot = document.createElement('div');
     dot.className = 'color-dot';
     dot.style.backgroundColor = color;
     if (index === 0) dot.classList.add('selected');
+    
     dot.addEventListener('click', () => {
         document.querySelector('.color-dot.selected').classList.remove('selected');
         dot.classList.add('selected');
@@ -35,82 +42,84 @@ colors.forEach((color, index) => {
     palette.appendChild(dot);
 });
 
-// Обновяване на позицията на екрана
-function updateTransform() {
-    // Ограничаваме мащаба, за да не стане прекалено малко или огромно
-    scale = Math.max(0.1, Math.min(scale, 50));
-    
-    // Ограничаваме движението, за да не избяга платното напълно от екрана
-    const maxMargin = BOARD_SIZE * scale;
-    offsetX = Math.max(-maxMargin, Math.min(offsetX, window.innerWidth + maxMargin));
-    offsetY = Math.max(-maxMargin, Math.min(offsetY, window.innerHeight + maxMargin));
-
+// Първоначално позициониране
+function updatetransform() {
     canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
-updateTransform();
+updatetransform();
 
-// --- ВЛАЧЕНЕ ---
+// --- ВЛАЧЕНЕ (DRAG) ---
 container.addEventListener('mousedown', (e) => {
-    // Влачене със заDuration Ляв бутон, Скрол или Shift
-    isDragging = true;
-    startX = e.clientX - offsetX;
-    startY = e.clientY - offsetY;
+    if (e.button === 1 || e.shiftKey || e.target === container) { // Влачене с Wheel или Shift+Клик
+        isDragging = true;
+        startX = e.clientX - offsetX;
+        startY = e.clientY - offsetY;
+    }
 });
 
 window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     offsetX = e.clientX - startX;
     offsetY = e.clientY - startY;
-    updateTransform();
+    updatetransform();
 });
 
 window.addEventListener('mouseup', () => { isDragging = false; });
 
-// --- КОРИГИРАН ZOOM (МАСЩАБИРАНЕ) ---
+// --- МАЩАБИРАНЕ (ZOOM) ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
-
-    // Взимаме позицията на мишката в момента на скролване
+    const zoomFactor = 1.1;
+    
+    // Позиция на мишката спрямо контейнера
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    // Намираме къде точно върху платното се намира мишката преди зуума
+    // Логика за zoom спрямо позицията на мишката
     const canvasMouseX = (mouseX - offsetX) / scale;
     const canvasMouseY = (mouseY - offsetY) / scale;
 
-    // Определяме силата на зуум (по-нежно изменение)
-    const zoomFactor = 1.1;
     if (e.deltaY < 0) {
-        scale *= zoomFactor; // Zoom in
+        scale *= zoomFactor;
     } else {
-        scale /= zoomFactor; // Zoom out
+        scale /= zoomFactor;
     }
+    
+    // Ограничения на зуума
+    scale = Math.max(0.5, Math.min(scale, 40));
 
-    // Преизчисляваме офсета, така че точката под мишката да остане на същото място
     offsetX = mouseX - canvasMouseX * scale;
     offsetY = mouseY * canvasMouseY * scale;
 
-    updateTransform();
+    updatetransform();
 }, { passive: false });
 
 // --- РИСУВАНЕ ---
 canvas.addEventListener('click', (e) => {
-    if (cooldown) return;
+    if (cooldown) return; // Ако има таймер, не прави нищо
 
+    // Взимане на точните координати на пиксела спрямо мащаба
     const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / scale);
     const y = Math.floor((e.clientY - rect.top) / scale);
 
     if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
-        ctx.fillStyle = selectedColor;
-        ctx.fillRect(x, y, 1, 1);
+        drawPixel(x, y, selectedColor);
         startCooldown();
+        
+        // ТУК: В бъдеще ще изпращаш (x, y, selectedColor) към сървъра през WebSocket
     }
 });
 
+function drawPixel(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, 1, 1);
+}
+
+// --- ТАЙМЕР ---
 function startCooldown() {
     cooldown = true;
-    let timeLeft = 2;
+    let timeLeft = cooldownTime;
     timerDisplay.innerText = `Изчакай: ${timeLeft}с`;
 
     const interval = setInterval(() => {
@@ -124,13 +133,3 @@ function startCooldown() {
         }
     }, 1000);
 }
-
-// Защита: Ако натиснеш бутона "R", платното се връща в центъра
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') {
-        scale = 1;
-        offsetX = (window.innerWidth - BOARD_SIZE) / 2;
-        offsetY = (window.innerHeight - BOARD_SIZE) / 2;
-        updateTransform();
-    }
-});
