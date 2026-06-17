@@ -1,3 +1,20 @@
+// --- 1. ТВОЯТА ФИКСИРАНА FIREBASE КОНФИГУРАЦИЯ ---
+const firebaseConfig = {
+  apiKey: "AIzaSyANO5MIoy1sk2WoRVKaxVdCWwpF3Kismjo",
+  authDomain: "my-pixel-canvas.firebaseapp.com",
+  databaseURL: "https://my-pixel-canvas-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "my-pixel-canvas",
+  storageBucket: "my-pixel-canvas.firebasestorage.app",
+  messagingSenderId: "125785381535",
+  appId: "1:125785381535:web:e330c42e375dcf9b4160aa"
+};
+
+// Инициализиране на връзката с базата данни
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const pixelsRef = database.ref('pixels');
+
+// --- 2. НАСТРОЙКИ НА ПЛАТНОТО ---
 const canvas = document.getElementById('pixelCanvas');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('canvas-container');
@@ -6,20 +23,18 @@ const palette = document.getElementById('palette');
 const centerBtn = document.getElementById('center-btn');
 const eraserBtn = document.getElementById('eraser-btn');
 
-// Фиксиран размер 500 на 500
-const BOARD_SIZE = 500;
+const BOARD_SIZE = 500; // Размер 500х500
 canvas.width = BOARD_SIZE;
 canvas.height = BOARD_SIZE;
 
-
-// Богата палитра - добавено е и чисто бяло (#ffffff) на второ място
+// Богата палитра - БЯЛОТО е на второ място
 const colors = [
     '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
     '#fff200', '#22b14c', '#00a2e8', '#3f48cc', '#a349a4', '#b5e61d',
     '#ffca18', '#ffaec9', '#b97a57', '#e06666', '#f6b26b', '#ffd966'
 ];
 let selectedColor = colors[0];
-let currentTool = 'pencil'; // Може да бъде 'pencil' (молив) или 'eraser' (гума)
+let currentTool = 'pencil'; 
 
 let scale = 1;
 let offsetX = (window.innerWidth - BOARD_SIZE) / 2;
@@ -28,36 +43,34 @@ let isDragging = false;
 let startX, startY;
 let cooldown = false;
 
-// Генериране на палитра
+// Генериране на палитрата на екрана
 colors.forEach((color, index) => {
     const dot = document.createElement('div');
     dot.className = 'color-dot';
     dot.style.backgroundColor = color;
     if (index === 0) dot.classList.add('selected');
-    
+    if (color === '#ffffff') dot.style.border = '1px solid #555';
+
     dot.addEventListener('click', () => {
-        // Когато се избере цвят, автоматично се изключва гумата
         currentTool = 'pencil';
         eraserBtn.classList.remove('active');
-        
         const activeDot = document.querySelector('.color-dot.selected');
         if (activeDot) activeDot.classList.remove('selected');
-        
         dot.classList.add('selected');
         selectedColor = color;
     });
     palette.appendChild(dot);
 });
 
-// Логика за бутона на гумата
+// Бутон за гумата
 eraserBtn.addEventListener('click', () => {
     currentTool = 'eraser';
     eraserBtn.classList.add('active');
-    // Премахваме селекцията от цветовете в палитрата
     const activeDot = document.querySelector('.color-dot.selected');
     if (activeDot) activeDot.classList.remove('selected');
 });
 
+// Движение на камерата
 function updateTransform() {
     scale = Math.max(0.5, Math.min(scale, 40));
     offsetX = Math.max(Math.min(offsetX, window.innerWidth - 50), -(BOARD_SIZE * scale) + 50);
@@ -72,25 +85,20 @@ container.addEventListener('mousedown', (e) => {
     startX = e.clientX - offsetX;
     startY = e.clientY - offsetY;
 });
-
 window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     offsetX = e.clientX - startX;
     offsetY = e.clientY - startY;
     updateTransform();
 });
-
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mouseleave', () => isDragging = false);
 
-// --- ZOOM (КОРИГИРАН И ТЕСТВАН) ---
+// --- ZOOM ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
-    
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-
-    // Взимане на координатите спрямо текущия мащаб
     const canvasMouseX = (mouseX - offsetX) / scale;
     const canvasMouseY = (mouseY - offsetY) / scale;
 
@@ -100,18 +108,13 @@ container.addEventListener('wheel', (e) => {
     } else {
         if (scale > 0.5) scale /= zoomFactor;
     }
-
-    // Фиксиране на мащаба
     scale = Math.max(0.5, Math.min(scale, 40));
-
-    // Преизчисляване на офсета, за да зуумва точно в мишката
     offsetX = mouseX - canvasMouseX * scale;
     offsetY = mouseY - canvasMouseY * scale;
-
     updateTransform();
 }, { passive: false });
 
-// --- РИСУВАНЕ / ТРИЕНЕ (С ПРОЗРАЧНА ГУМА) ---
+// --- СИНХРОНИЗИРАНО РИСУВАНЕ И ТРИЕНЕ ---
 canvas.addEventListener('click', (e) => {
     if (cooldown) return;
 
@@ -120,13 +123,15 @@ canvas.addEventListener('click', (e) => {
     const y = Math.floor((e.clientY - rect.top) / scale);
 
     if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+        const pixelKey = `x${x}_y${y}`;
+
         if (currentTool === 'pencil') {
-            ctx.fillStyle = selectedColor;
-            ctx.fillRect(x, y, 1, 1);
-            startCooldown(0.2); // 0.2 секунди за молив
+            // Изпращане на пиксела към Firebase
+            pixelsRef.child(pixelKey).set({ x: x, y: y, color: selectedColor });
+            startCooldown(0.2); // 0.2 секунди
         } else if (currentTool === 'eraser') {
-            // КРИТИЧНАТА ПРОМЯНА: Изтрива пиксела напълно и го прави прозрачен!
-            ctx.clearRect(x, y, 1, 1); 
+            // Изтриване на пиксела от Firebase
+            pixelsRef.child(pixelKey).remove();
             startCooldown(0.5); // 0.5 секунди за гума
         }
     }
@@ -140,7 +145,6 @@ function startCooldown(duration) {
 
     const interval = setInterval(() => {
         timeLeft -= 0.1;
-        
         if (timeLeft <= 0) {
             clearInterval(interval);
             cooldown = false;
@@ -150,6 +154,24 @@ function startCooldown(duration) {
         }
     }, 100);
 }
+
+// --- СЛУШАТЕЛИ ЗА ОБНОВЯВАНЕ В РЕАЛНО ВРЕМЕ ---
+pixelsRef.on('child_added', (snapshot) => {
+    const data = snapshot.val();
+    ctx.fillStyle = data.color;
+    ctx.fillRect(data.x, data.y, 1, 1);
+});
+
+pixelsRef.on('child_changed', (snapshot) => {
+    const data = snapshot.val();
+    ctx.fillStyle = data.color;
+    ctx.fillRect(data.x, data.y, 1, 1);
+});
+
+pixelsRef.on('child_removed', (snapshot) => {
+    const data = snapshot.val();
+    ctx.clearRect(data.x, data.y, 1, 1);
+});
 
 // --- ЦЕНТРИРАНЕ ---
 function resetView() {
