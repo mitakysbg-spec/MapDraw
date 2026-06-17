@@ -11,9 +11,10 @@ const BOARD_SIZE = 500;
 canvas.width = BOARD_SIZE;
 canvas.height = BOARD_SIZE;
 
-// Богата палитра
+
+// Богата палитра - добавено е и чисто бяло (#ffffff) на второ място
 const colors = [
-    '#000000', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
+    '#000000', '#ffffff', '#7e7e7e', '#bebebe', '#ed1c24', '#ff7f27', 
     '#fff200', '#22b14c', '#00a2e8', '#3f48cc', '#a349a4', '#b5e61d',
     '#ffca18', '#ffaec9', '#b97a57', '#e06666', '#f6b26b', '#ffd966'
 ];
