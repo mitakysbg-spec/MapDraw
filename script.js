@@ -100,7 +100,7 @@ container.addEventListener('wheel', (e) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     const canvasMouseX = (mouseX - offsetX) / scale;
-    const canvasMouseY = (mouseY - offsetY) / scale;
+    const canvasMouseY = (moveY - offsetY) / scale;
 
     const zoomFactor = 1.1; 
     if (e.deltaY < 0) {
