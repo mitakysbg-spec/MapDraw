@@ -5,8 +5,9 @@ const timerDisplay = document.getElementById('timer');
 const palette = document.getElementById('palette');
 const centerBtn = document.getElementById('center-btn');
 
-// Фиксиран размер 1000 на 1000
-const BOARD_SIZE = 1000;
+
+//  500
+const BOARD_SIZE = 500;
 canvas.width = BOARD_SIZE;
 canvas.height = BOARD_SIZE;
 
