@@ -1,10 +1,130 @@
 <!DOCTYPE html>
-<html>
+<html lang="bg">
 <head>
-    <title>MapDraw</title>
+<meta charset="UTF-8">
+<title>Pixel Canvas</title>
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: Arial;
+}
+
+#toolbar {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: #222;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 10;
+}
+
+.color {
+    width: 25px;
+    height: 25px;
+    display: inline-block;
+    margin: 2px;
+    cursor: pointer;
+    border: 2px solid white;
+}
+
+canvas {
+    background: #fff;
+    cursor: grab;
+}
+</style>
 </head>
 <body>
-    <h1>Добре дошли в MapDraw!</h1>
-    <p>Това е моят първи сайт.</p>
+
+<div id="toolbar">
+    <div class="color" style="background:red"></div>
+    <div class="color" style="background:blue"></div>
+    <div class="color" style="background:green"></div>
+    <div class="color" style="background:black"></div>
+    <div class="color" style="background:yellow"></div>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const gridSize = 20;
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+
+let selectedColor = "red";
+let canDraw = true;
+
+const pixels = {};
+
+// COLORS
+document.querySelectorAll(".color").forEach(c => {
+    c.onclick = () => selectedColor = c.style.background;
+});
+
+// DRAW GRID
+function draw() {
+    ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+    ctx.clearRect(-10000, -10000, 20000, 20000);
+
+    for (let key in pixels) {
+        const [x, y] = key.split(",").map(Number);
+        ctx.fillStyle = pixels[key];
+        ctx.fillRect(x * gridSize, y * gridSize, gridSize, gridSize);
+    }
+}
+setInterval(draw, 30);
+
+// CLICK TO DRAW PIXEL
+canvas.addEventListener("click", (e) => {
+    if (!canDraw) return;
+
+    const x = Math.floor((e.clientX - offsetX) / scale / gridSize);
+    const y = Math.floor((e.clientY - offsetY) / scale / gridSize);
+
+    pixels[`${x},${y}`] = selectedColor;
+
+    canDraw = false;
+    setTimeout(() => canDraw = true, 2000); // 2 sec cooldown
+});
+
+// ZOOM
+canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    scale += e.deltaY * -0.001;
+    scale = Math.min(Math.max(0.5, scale), 5);
+});
+
+// DRAG
+let dragging = false;
+let lastX, lastY;
+
+canvas.addEventListener("mousedown", (e) => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+canvas.addEventListener("mouseup", () => dragging = false);
+
+canvas.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+
+    offsetX += e.clientX - lastX;
+    offsetY += e.clientY - lastY;
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+</script>
+
 </body>
 </html>
