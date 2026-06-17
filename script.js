@@ -109,21 +109,29 @@ canvas.addEventListener('click', (e) => {
 });
 
 // --- ТАЙМЕР ---
+// Настройки за таймера (в секунди - поддържа десетични числа)
+const cooldownTime = 0.2; 
+
 function startCooldown() {
     cooldown = true;
-    let timeLeft = 2;
-    timerDisplay.innerText = `Изчакай: ${timeLeft}с`;
+    let timeLeft = cooldownTime;
+    
+    // Показваме първоначалното време (напр. "0.2с")
+    timerDisplay.innerText = `Изчакай: ${timeLeft.toFixed(1)}с`;
 
+    // Използваме setInterval, който се задейства на всеки 100 милисекунди (0.1с)
     const interval = setInterval(() => {
-        timeLeft--;
+        timeLeft -= 0.1; // Намаляваме с 0.1 секунди
+        
         if (timeLeft <= 0) {
             clearInterval(interval);
             cooldown = false;
             timerDisplay.innerText = "Готов за рисуване!";
         } else {
-            timerDisplay.innerText = `Изчакай: ${timeLeft}с`;
+            // .toFixed(1) гарантира, че ще изглежда като "0.1с", а не "0.10000000001с"
+            timerDisplay.innerText = `Изчакай: ${timeLeft.toFixed(1)}с`;
         }
-    }, 1000);
+    }, 100); // 100ms = 0.1 секунда
 }
 
 // --- ЦЕНТРИРАНЕ ---
