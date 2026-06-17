@@ -133,3 +133,17 @@ function startCooldown() {
         }
     }, 1000);
 }
+
+// Взимане на бутона от HTML
+const centerBtn = document.getElementById('center-btn');
+
+// Функция за центриране
+function resetView() {
+    scale = 1;
+    offsetX = (window.innerWidth - BOARD_SIZE) / 2;
+    offsetY = (window.innerHeight - BOARD_SIZE) / 2;
+    updateTransform();
+}
+
+// Задействане при клик на бутона
+centerBtn.addEventListener('click', resetView);
