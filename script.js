@@ -21,6 +21,7 @@ const timerDisplay = document.getElementById('timer');
 const palette = document.getElementById('palette');
 const centerBtn = document.getElementById('center-btn');
 const eraserBtn = document.getElementById('eraser-btn');
+const themeBtn = document.getElementById('theme-btn'); // Дефиниране на бутона за тема
 
 const BOARD_SIZE = 500; 
 canvas.width = BOARD_SIZE;
@@ -40,6 +41,11 @@ let offsetY = (window.innerHeight - BOARD_SIZE) / 2;
 let isDragging = false;
 let startX, startY;
 let cooldown = false;
+
+// Логика за бутона за Смяна на Темата
+themeBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light-theme');
+});
 
 // Генериране на палитра
 colors.forEach((color, index) => {
@@ -90,13 +96,13 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mouseleave', () => isDragging = false);
 
-// --- ZOOM (ФИКСИРАН) ---
+// --- ZOOM ---
 container.addEventListener('wheel', (e) => {
     e.preventDefault();
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     const canvasMouseX = (mouseX - offsetX) / scale;
-    const canvasMouseY = (mouseY - offsetY) / scale; // Поправено от moveY на mouseY
+    const canvasMouseY = (mouseY - offsetY) / scale;
 
     const zoomFactor = 1.1; 
     if (e.deltaY < 0) {
