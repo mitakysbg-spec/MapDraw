@@ -111,7 +111,7 @@ container.addEventListener('wheel', (e) => {
     updateTransform();
 }, { passive: false });
 
-// --- РИСУВАНЕ / ТРИЕНЕ ---
+// --- РИСУВАНЕ / ТРИЕНЕ (С ПРОЗРАЧНА ГУМА) ---
 canvas.addEventListener('click', (e) => {
     if (cooldown) return;
 
@@ -125,8 +125,8 @@ canvas.addEventListener('click', (e) => {
             ctx.fillRect(x, y, 1, 1);
             startCooldown(0.2); // 0.2 секунди за молив
         } else if (currentTool === 'eraser') {
-            ctx.fillStyle = '#ffffff'; // Триенето всъщност запълва с бяло
-            ctx.fillRect(x, y, 1, 1);
+            // КРИТИЧНАТА ПРОМЯНА: Изтрива пиксела напълно и го прави прозрачен!
+            ctx.clearRect(x, y, 1, 1); 
             startCooldown(0.5); // 0.5 секунди за гума
         }
     }
